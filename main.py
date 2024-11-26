@@ -47,7 +47,7 @@ def open_activity_window(activity):
 
     def save_changes():
         new_name = name_var.get()
-        new_desc = desc_var.get()
+        new_desc = desc_entry.get("1.0", tk.END).strip()  # Récupérer le texte du widget Text
         new_link = link_var.get()
         if not new_name:
             messagebox.showerror("Erreur", "Le nom de l'activité est requis.")
@@ -61,44 +61,46 @@ def open_activity_window(activity):
     activity_window = tk.Toplevel(app)
     activity_window.title("Détails de l'activité")
     activity_window.geometry("1100x700")
+    activity_window.configure(bg=background_color)
 
     # Widgets
-    tk.Label(activity_window, text="Nom de l'activité :").pack(pady=5)
+    tk.Label(activity_window, text="Nom de l'activité :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
     name_var = tk.StringVar(value=activity['nom'])
-    name_entry = tk.Entry(activity_window, textvariable=name_var, state="disabled", width=50)
+    name_entry = tk.Entry(activity_window, textvariable=name_var, state="disabled", width=70, bg=secondary_color, fg='black', font=('Helvetica', 10))
     name_entry.pack(pady=5)
 
-    tk.Label(activity_window, text="Description :").pack(pady=5)
-    desc_var = tk.StringVar(value=activity['description'])
-    desc_entry = tk.Entry(activity_window, textvariable=desc_var, state="disabled", width=50)
+    tk.Label(activity_window, text="Description :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
+    desc_entry = tk.Text(activity_window, height=15, width=100, bg=secondary_color, fg='black', font=('Helvetica', 10))
+    desc_entry.insert(tk.END, activity['description'])
+    desc_entry.config(state="disabled")
     desc_entry.pack(pady=5)
 
-    tk.Label(activity_window, text="Lien :").pack(pady=5)
+    tk.Label(activity_window, text="Lien :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
     link_var = tk.StringVar(value=activity['lien'])
-    link_entry = tk.Entry(activity_window, textvariable=link_var, state="disabled", width=50)
+    link_entry = tk.Entry(activity_window, textvariable=link_var, state="disabled", width=70, bg=secondary_color, fg='black', font=('Helvetica', 10))
     link_entry.pack(pady=5)
 
     # Frame pour les images
-    images_frame = tk.Frame(activity_window)
+    images_frame = tk.Frame(activity_window, bg=background_color)
     images_frame.pack(pady=5)
 
     for image_path in activity['images']:
         img = Image.open(image_path)
         img.thumbnail((200, 200), Image.Resampling.LANCZOS)  # Conserve le ratio d'aspect
         img = ImageTk.PhotoImage(img)
-        img_label = tk.Label(images_frame, image=img)
+        img_label = tk.Label(images_frame, image=img, bg=background_color)
         img_label.image = img  # Keep a reference to avoid garbage collection
         img_label.pack(side=tk.LEFT, padx=5)
 
-    edit_button = tk.Button(activity_window, text="Modifier", command=toggle_edit)
+    edit_button = tk.Button(activity_window, text="Modifier", command=toggle_edit, bg=primary_color, fg=secondary_color, font=('Helvetica', 10, 'bold'))
     edit_button.pack(pady=10)
 
-    save_button = tk.Button(activity_window, text="Enregistrer", command=save_changes, state="disabled")
+    save_button = tk.Button(activity_window, text="Enregistrer", command=save_changes, state="disabled", bg=primary_color, fg=secondary_color, font=('Helvetica', 10, 'bold'))
     save_button.pack(pady=10)
 
     # Lancer la fenêtre
     activity_window.mainloop()
-    
+
 def add_new_objectif():
     """Ajoute un nouvel objectif dans la base de données."""
     def save_objectif():
@@ -111,21 +113,21 @@ def add_new_objectif():
         refresh_objectifs()  # Met à jour la combobox
         objectif_window.destroy()
 
-
     objectif_window = tk.Toplevel(app)
     objectif_window.title("Ajouter un Objectif")
     objectif_window.geometry("500x300")
+    objectif_window.configure(bg=background_color)
 
-    tk.Label(objectif_window, text="Nom de l'objectif :").pack(pady=5)
-    objectif_name = tk.Entry(objectif_window)
+    tk.Label(objectif_window, text="Nom de l'objectif :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
+    objectif_name = tk.Entry(objectif_window, bg=secondary_color, fg='black', font=('Helvetica', 10))
     objectif_name.pack(pady=5)
 
-    tk.Button(objectif_window, text="Enregistrer", command=save_objectif).pack(pady=10)
+    tk.Button(objectif_window, text="Enregistrer", command=save_objectif, bg=primary_color, fg=secondary_color, font=('Helvetica', 10, 'bold')).pack(pady=10)
 
 
 def save_activity():
     nom = activite_name.get().strip()
-    description = activite_desc.get().strip()
+    description = activite_desc.get("1.0", tk.END).strip()  # Récupérer le texte du widget Text
     lien = activite_link.get().strip()
     image_paths = activite_image_paths.get().strip().split(";")
     objectif_id = objectif_var.get().split(" - ")[0].strip()
@@ -141,43 +143,51 @@ def save_activity():
 
 
 def add_new_activity():
-    global activite_name, activite_desc, activite_link, activite_image_paths, activite_window
+    global activite_name, activite_desc, activite_link, activite_image_paths, activite_window, image_text
 
     def select_images():
         file_paths = filedialog.askopenfilenames(filetypes=[("Image files", "*.jpg *.jpeg *.png")])
         if file_paths:
             activite_image_paths.set(";".join(file_paths))
+            image_text.delete("1.0", tk.END)
+            image_text.insert(tk.END, "\n".join(file_paths))
 
     def drop(event):
         file_paths = event.data.split()
         activite_image_paths.set(";".join(file_paths))
+        image_text.delete("1.0", tk.END)
+        image_text.insert(tk.END, "\n".join(file_paths))
 
     activite_window = tk.Toplevel(app)
     activite_window.title("Ajouter une Activité")
     activite_window.geometry("1100x700")
+    activite_window.configure(bg=background_color)
 
-    tk.Label(activite_window, text="Nom de l'activité :").pack(pady=5)
-    activite_name = tk.Entry(activite_window)
+    tk.Label(activite_window, text="Nom de l'activité :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
+    activite_name = tk.Entry(activite_window, bg=secondary_color, fg='black', font=('Helvetica', 10), width=70)
     activite_name.pack(pady=5)
 
-    tk.Label(activite_window, text="Description :").pack(pady=5)
-    activite_desc = tk.Entry(activite_window)
+    tk.Label(activite_window, text="Description :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
+    activite_desc = tk.Text(activite_window, height=15, width=100, bg=secondary_color, fg='black', font=('Helvetica', 10))
     activite_desc.pack(pady=5)
-    
 
-    tk.Label(activite_window, text="Lien :").pack(pady=5)
-    activite_link = tk.Entry(activite_window)
+    tk.Label(activite_window, text="Lien :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
+    activite_link = tk.Entry(activite_window, bg=secondary_color, fg='black', font=('Helvetica', 10), width=70)
     activite_link.pack(pady=5)
 
-    tk.Label(activite_window, text="Images :").pack(pady=5)
+    tk.Label(activite_window, text="Images :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
     activite_image_paths = tk.StringVar()
-    image_entry = tk.Entry(activite_window, textvariable=activite_image_paths, state="readonly")
-    image_entry.pack(pady=5)
-    image_entry.drop_target_register(DND_FILES)
-    image_entry.dnd_bind('<<Drop>>', drop)
-    tk.Button(activite_window, text="Sélectionner des images", command=select_images).pack(pady=5)
+    image_text = tk.Text(activite_window, height=5, width=70, bg=secondary_color, fg='black', font=('Helvetica', 10))
+    image_text.pack(pady=5)
+    image_text.drop_target_register(DND_FILES)
+    image_text.dnd_bind('<<Drop>>', drop)
+    tk.Button(activite_window, text="Sélectionner des images", command=select_images, bg=primary_color, fg=secondary_color, font=('Helvetica', 10, 'bold')).pack(pady=5)
 
-    tk.Button(activite_window, text="Enregistrer", command=save_activity).pack(pady=10)
+    tk.Button(activite_window, text="Enregistrer", command=save_activity, bg=primary_color, fg=secondary_color, font=('Helvetica', 10, 'bold')).pack(pady=10)
+
+    # Configurer les poids des colonnes et des lignes
+    activite_window.grid_columnconfigure(0, weight=1)
+    activite_window.grid_rowconfigure(3, weight=1)
   
 def delete_activity():
     selected_activity_index = listbox.curselection()
