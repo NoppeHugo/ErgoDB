@@ -61,6 +61,7 @@ def open_activity_window(activity):
     # Création de la fenêtre
     activity_window = tk.Toplevel(app)
     activity_window.title("Détails de l'activité")
+    activity_window.geometry("1100x700")
 
     # Widgets
     tk.Label(activity_window, text="Nom de l'activité :").pack(pady=5)
@@ -84,12 +85,6 @@ def open_activity_window(activity):
     save_button = tk.Button(activity_window, text="Enregistrer", command=save_changes, state="disabled")
     save_button.pack(pady=10)
 
-    # Ajuster la taille de la fenêtre selon son contenu
-    activity_window.update_idletasks()  # S'assurer que les widgets ont été ajoutés et mis à jour
-    width = activity_window.winfo_width()
-    height = activity_window.winfo_height()
-    activity_window.geometry(f"{width}x{height}")  # Définir la taille de la fenêtre
-
     # Lancer la fenêtre
     activity_window.mainloop()
 
@@ -108,12 +103,14 @@ def add_new_objectif():
 
     objectif_window = tk.Toplevel(app)
     objectif_window.title("Ajouter un Objectif")
+    objectif_window.geometry("500x300")
 
     tk.Label(objectif_window, text="Nom de l'objectif :").pack(pady=5)
     objectif_name = tk.Entry(objectif_window)
     objectif_name.pack(pady=5)
 
     tk.Button(objectif_window, text="Enregistrer", command=save_objectif).pack(pady=10)
+
 
 def save_activity():
     nom = activite_name.get()
@@ -134,6 +131,7 @@ def add_new_activity():
 
     activite_window = tk.Toplevel(app)
     activite_window.title("Ajouter une Activité")
+    activite_window.geometry("1100x700")
 
     tk.Label(activite_window, text="Nom de l'activité :").pack(pady=5)
     activite_name = tk.Entry(activite_window)
@@ -154,11 +152,20 @@ def delete_activity():
     if not selected_activity_index:
         messagebox.showerror("Erreur", "Veuillez sélectionner une activité à supprimer.")
         return
+    
     selected_activity = listbox.get(selected_activity_index)
     activite_id = int(selected_activity.split(" - ")[0])  # Récupérer l'ID de l'activité
-    delete_activite_by_id(activite_id)  # Passez l'ID de l'activité à la fonction
-    listbox.delete(selected_activity_index)
-    messagebox.showinfo("Succès", "Activité supprimée avec succès.")
+
+    # Demande de confirmation
+    confirmation = messagebox.askyesno(
+        "Confirmation",
+        f"Êtes-vous sûr de vouloir supprimer l'activité suivante ?\n\n{selected_activity}"
+    )
+    
+    if confirmation:
+        delete_activite_by_id(activite_id)  # Supprime l'activité
+        listbox.delete(selected_activity_index)  # Retire l'activité de l'interface
+        messagebox.showinfo("Succès", "Activité supprimée avec succès.")
 
 
 def delete_selected_objectif():
@@ -195,7 +202,7 @@ def delete_selected_objectif():
 # Configuration de l'interface utilisateur
 app = tk.Tk()
 app.title("Ergothérapie - Gestion des Activités")
-app.geometry("800x600")
+app.geometry("1100x700")
 app.configure(bg="#E8F5E9")  # Blanc cassé vert
 
 # Appliquer un thème
