@@ -162,29 +162,33 @@ def delete_activity():
 
 
 def delete_selected_objectif():
-    """Supprime l'objectif sélectionné et ses activités associées."""
+    """Supprime l'objectif sélectionné avec confirmation, affichant d'abord les activités associées."""
     objectif = objectif_var.get()
     if not objectif:
         messagebox.showerror("Erreur", "Veuillez sélectionner un objectif à supprimer.")
         return
-    if messagebox.askyesno("Confirmation", "Êtes-vous sûr de vouloir supprimer cet objectif et toutes ses activités associées ?"):
-        objectif_id = int(objectif.split(" - ")[0])  # Récupérer l'ID de l'objectif
+
+    objectif_id = int(objectif.split(" - ")[0])  # Récupérer l'ID de l'objectif
+    activites = fetch_activites_by_objectif(objectif_id)
+
+    if activites:
+        activites_text = "\n".join([f"{act[0]} - {act[1]}" for act in activites])
+        confirmation_text = (
+            f"L'objectif sélectionné contient les activités suivantes :\n\n{activites_text}\n\n"
+            "Êtes-vous sûr de vouloir supprimer cet objectif et toutes ses activités associées ?"
+        )
+    else:
+        confirmation_text = (
+            "L'objectif sélectionné ne contient aucune activité.\n\n"
+            "Êtes-vous sûr de vouloir le supprimer ?"
+        )
+
+    if messagebox.askyesno("Confirmation", confirmation_text):
         delete_objectif(objectif_id)  # Supprimer l'objectif et ses activités associées
         refresh_objectifs()  # Mettre à jour la liste des objectifs
         listbox.delete(0, tk.END)  # Vider la liste des activités
+        messagebox.showinfo("Succès", "Objectif et ses activités supprimés avec succès.")
 
-def display_objectifs_with_icons():
-    """Afficher les objectifs dans un menu déroulant avec des icônes."""
-    menu = tk.Menu(app, tearoff=0)
-    objectifs = fetch_objectifs()
-
-    for obj in objectifs:
-        trash_icon = PhotoImage(file="poubelle.png")  # Icône de poubelle
-        menu.add_command(label=f"{obj[1]}", image=trash_icon, compound='right', 
-                         command=lambda id=obj[0]: delete_objectif(id))
-        menu.entryconfig(obj[1], image=trash_icon)  # Ajoute l'icône dans la colonne droite
-    
-    menu.post(app.winfo_x(), app.winfo_y())
 
 
 
