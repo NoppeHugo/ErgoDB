@@ -1,7 +1,6 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
-from tkinter import ttk
-from tkinter import PhotoImage
+from tkinter import ttk, messagebox, filedialog, PhotoImage
+from tkinterdnd2 import DND_FILES, TkinterDnD
 from database import delete_objectif, init_db, fetch_objectifs, fetch_activites_by_objectif, add_objectif, add_activite, update_activite, delete_activite_by_id, fetch_activity_by_id
 from PIL import Image, ImageTk
 
@@ -79,6 +78,18 @@ def open_activity_window(activity):
     link_entry = tk.Entry(activity_window, textvariable=link_var, state="disabled", width=50)
     link_entry.pack(pady=5)
 
+    # Frame pour les images
+    images_frame = tk.Frame(activity_window)
+    images_frame.pack(pady=5)
+
+    for image_path in activity['images']:
+        img = Image.open(image_path)
+        img.thumbnail((200, 200), Image.Resampling.LANCZOS)  # Conserve le ratio d'aspect
+        img = ImageTk.PhotoImage(img)
+        img_label = tk.Label(images_frame, image=img)
+        img_label.image = img  # Keep a reference to avoid garbage collection
+        img_label.pack(side=tk.LEFT, padx=5)
+
     edit_button = tk.Button(activity_window, text="Modifier", command=toggle_edit)
     edit_button.pack(pady=10)
 
@@ -87,7 +98,7 @@ def open_activity_window(activity):
 
     # Lancer la fenêtre
     activity_window.mainloop()
-
+    
 def add_new_objectif():
     """Ajoute un nouvel objectif dans la base de données."""
     def save_objectif():
@@ -113,21 +124,33 @@ def add_new_objectif():
 
 
 def save_activity():
-    nom = activite_name.get()
-    description = activite_desc.get()
-    lien = activite_link.get()
-    objectif_id = objectif_var.get().split(" - ")[0]
-    if not nom or not objectif_id:
+    nom = activite_name.get().strip()
+    description = activite_desc.get().strip()
+    lien = activite_link.get().strip()
+    image_paths = activite_image_paths.get().strip().split(";")
+    objectif_id = objectif_var.get().split(" - ")[0].strip()
+    
+    if not nom or not description or not lien or not image_paths or not objectif_id:
         messagebox.showerror("Erreur", "Veuillez remplir tous les champs.")
         return
-    add_activite(nom, description, lien, int(objectif_id))
+    
+    add_activite(nom, description, lien, int(objectif_id), image_paths)
     messagebox.showinfo("Succès", "Activité ajoutée avec succès.")
     display_activities()  # Met à jour la liste d'activités automatiquement
     activite_window.destroy()
 
 
 def add_new_activity():
-    global activite_name, activite_desc, activite_link, activite_window
+    global activite_name, activite_desc, activite_link, activite_image_paths, activite_window
+
+    def select_images():
+        file_paths = filedialog.askopenfilenames(filetypes=[("Image files", "*.jpg *.jpeg *.png")])
+        if file_paths:
+            activite_image_paths.set(";".join(file_paths))
+
+    def drop(event):
+        file_paths = event.data.split()
+        activite_image_paths.set(";".join(file_paths))
 
     activite_window = tk.Toplevel(app)
     activite_window.title("Ajouter une Activité")
@@ -140,10 +163,19 @@ def add_new_activity():
     tk.Label(activite_window, text="Description :").pack(pady=5)
     activite_desc = tk.Entry(activite_window)
     activite_desc.pack(pady=5)
+    
 
     tk.Label(activite_window, text="Lien :").pack(pady=5)
     activite_link = tk.Entry(activite_window)
     activite_link.pack(pady=5)
+
+    tk.Label(activite_window, text="Images :").pack(pady=5)
+    activite_image_paths = tk.StringVar()
+    image_entry = tk.Entry(activite_window, textvariable=activite_image_paths, state="readonly")
+    image_entry.pack(pady=5)
+    image_entry.drop_target_register(DND_FILES)
+    image_entry.dnd_bind('<<Drop>>', drop)
+    tk.Button(activite_window, text="Sélectionner des images", command=select_images).pack(pady=5)
 
     tk.Button(activite_window, text="Enregistrer", command=save_activity).pack(pady=10)
   
@@ -200,7 +232,7 @@ def delete_selected_objectif():
 
 
 # Configuration de l'interface utilisateur
-app = tk.Tk()
+app = TkinterDnD.Tk()
 app.title("Ergothérapie - Gestion des Activités")
 app.geometry("1100x700")
 app.configure(bg="#E8F5E9")  # Blanc cassé vert
@@ -259,6 +291,8 @@ listbox.bind("<Double-1>", view_activity_details)
 activity_button_frame = tk.Frame(app, bg=background_color)
 activity_button_frame.pack(pady=20)
 
+icon_image = PhotoImage(file="icon.png")
+app.iconphoto(True, icon_image)
 # Bouton pour ajouter une activité
 ttk.Button(activity_button_frame, text="Ajouter une Activité", command=add_new_activity, style='TButton').pack(side=tk.LEFT, padx=10)
 
