@@ -1,8 +1,11 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, PhotoImage
 from tkinterdnd2 import DND_FILES, TkinterDnD
-from database import delete_objectif, init_db, fetch_objectifs, fetch_activites_by_objectif, add_objectif, add_activite, update_activite, delete_activite_by_id, fetch_activity_by_id
+from database import delete_objectif, init_db, fetch_objectifs, fetch_activites_by_objectif, add_objectif, add_activite, update_activite, delete_activite_by_id, fetch_activity_by_id, fetch_objectif_by_id
 from PIL import Image, ImageTk
+import os
+import shutil
+
 
 # Initialisation de la base de données
 init_db()
@@ -60,7 +63,7 @@ def open_activity_window(activity):
     # Création de la fenêtre
     activity_window = tk.Toplevel(app)
     activity_window.title("Détails de l'activité")
-    activity_window.geometry("1100x700")
+    activity_window.geometry("1100x850")
     activity_window.configure(bg=background_color)
 
     # Widgets
@@ -69,16 +72,12 @@ def open_activity_window(activity):
     name_entry = tk.Entry(activity_window, textvariable=name_var, state="disabled", width=70, bg=secondary_color, fg='black', font=('Helvetica', 10))
     name_entry.pack(pady=5)
 
-    tk.Label(activity_window, text="Description :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
-    desc_entry = tk.Text(activity_window, height=15, width=100, bg=secondary_color, fg='black', font=('Helvetica', 10))
-    desc_entry.insert(tk.END, activity['description'])
-    desc_entry.config(state="disabled")
-    desc_entry.pack(pady=5)
-
-    tk.Label(activity_window, text="Lien :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
-    link_var = tk.StringVar(value=activity['lien'])
-    link_entry = tk.Entry(activity_window, textvariable=link_var, state="disabled", width=70, bg=secondary_color, fg='black', font=('Helvetica', 10))
-    link_entry.pack(pady=5)
+    tk.Label(activity_window, text="Objectifs :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
+    objectifs_frame = tk.Frame(activity_window, bg=background_color)
+    objectifs_frame.pack(pady=5)
+    for objectif_id in activity['objectifs']:
+        objectif = fetch_objectif_by_id(objectif_id)  # Assurez-vous d'avoir une fonction fetch_objectif_by_id
+        tk.Label(objectifs_frame, text=objectif['nom'], bg=background_color, fg='black', font=('Helvetica', 10)).pack(pady=2)
 
     # Frame pour les images
     images_frame = tk.Frame(activity_window, bg=background_color)
@@ -91,6 +90,17 @@ def open_activity_window(activity):
         img_label = tk.Label(images_frame, image=img, bg=background_color)
         img_label.image = img  # Keep a reference to avoid garbage collection
         img_label.pack(side=tk.LEFT, padx=5)
+
+    tk.Label(activity_window, text="Description :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
+    desc_entry = tk.Text(activity_window, height=15, width=100, bg=secondary_color, fg='black', font=('Helvetica', 10))
+    desc_entry.insert(tk.END, activity['description'])
+    desc_entry.config(state="disabled")
+    desc_entry.pack(pady=5)
+
+    tk.Label(activity_window, text="Lien :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
+    link_var = tk.StringVar(value=activity['lien'])
+    link_entry = tk.Entry(activity_window, textvariable=link_var, state="disabled", width=70, bg=secondary_color, fg='black', font=('Helvetica', 10))
+    link_entry.pack(pady=5)
 
     edit_button = tk.Button(activity_window, text="Modifier", command=toggle_edit, bg=primary_color, fg=secondary_color, font=('Helvetica', 10, 'bold'))
     edit_button.pack(pady=10)
@@ -130,27 +140,49 @@ def save_activity():
     description = activite_desc.get("1.0", tk.END).strip()  # Récupérer le texte du widget Text
     lien = activite_link.get().strip()
     image_paths = activite_image_paths.get().strip().split(";")
-    objectif_id = objectif_var.get().split(" - ")[0].strip()
+    selected_objectifs = objectifs_listbox.curselection()
+    objectif_ids = [int(objectifs_listbox.get(i).split(" - ")[0]) for i in selected_objectifs]
     
-    if not nom or not description or not lien or not image_paths or not objectif_id:
+    if not nom or not description or not lien or not image_paths or not objectif_ids:
         messagebox.showerror("Erreur", "Veuillez remplir tous les champs.")
         return
     
-    add_activite(nom, description, lien, int(objectif_id), image_paths)
+    add_activite(nom, description, lien, objectif_ids, image_paths)
     messagebox.showinfo("Succès", "Activité ajoutée avec succès.")
     display_activities()  # Met à jour la liste d'activités automatiquement
     activite_window.destroy()
 
 
 def add_new_activity():
-    global activite_name, activite_desc, activite_link, activite_image_paths, activite_window, image_text
+    global activite_name, activite_desc, activite_link, activite_image_paths, activite_window, image_text, objectifs_listbox
 
     def select_images():
         file_paths = filedialog.askopenfilenames(filetypes=[("Image files", "*.jpg *.jpeg *.png")])
         if file_paths:
-            activite_image_paths.set(";".join(file_paths))
+            local_image_paths = []
+            for file_path in file_paths:
+                # Créer le dossier local pour les images s'il n'existe pas
+                local_image_dir = os.path.join(os.getcwd(), "images")
+                os.makedirs(local_image_dir, exist_ok=True)
+
+                # Générer un nom de fichier incrémenté
+                base_name = os.path.basename(file_path)
+                name, ext = os.path.splitext(base_name)
+                counter = 1
+                new_name = f"{name}_{counter}{ext}"
+                new_path = os.path.join(local_image_dir, new_name)
+                while os.path.exists(new_path):
+                    counter += 1
+                    new_name = f"{name}_{counter}{ext}"
+                    new_path = os.path.join(local_image_dir, new_name)
+
+                # Copier l'image dans le dossier local
+                shutil.copy(file_path, new_path)
+                local_image_paths.append(new_path)
+
+            activite_image_paths.set(";".join(local_image_paths))
             image_text.delete("1.0", tk.END)
-            image_text.insert(tk.END, "\n".join(file_paths))
+            image_text.insert(tk.END, "\n".join(local_image_paths))
 
     def drop(event):
         file_paths = event.data.split()
@@ -160,7 +192,7 @@ def add_new_activity():
 
     activite_window = tk.Toplevel(app)
     activite_window.title("Ajouter une Activité")
-    activite_window.geometry("1100x700")
+    activite_window.geometry("1100x850")
     activite_window.configure(bg=background_color)
 
     tk.Label(activite_window, text="Nom de l'activité :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
@@ -174,6 +206,13 @@ def add_new_activity():
     tk.Label(activite_window, text="Lien :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
     activite_link = tk.Entry(activite_window, bg=secondary_color, fg='black', font=('Helvetica', 10), width=70)
     activite_link.pack(pady=5)
+
+    tk.Label(activite_window, text="Objectifs :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
+    objectifs_listbox = tk.Listbox(activite_window, selectmode=tk.MULTIPLE, bg=secondary_color, fg='black', font=('Helvetica', 10), width=70)
+    objectifs = fetch_objectifs()
+    for obj in objectifs:
+        objectifs_listbox.insert(tk.END, f"{obj[0]} - {obj[1]}")
+    objectifs_listbox.pack(pady=5)
 
     tk.Label(activite_window, text="Images :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
     activite_image_paths = tk.StringVar()
@@ -244,7 +283,7 @@ def delete_selected_objectif():
 # Configuration de l'interface utilisateur
 app = TkinterDnD.Tk()
 app.title("Ergothérapie - Gestion des Activités")
-app.geometry("1100x700")
+app.geometry("1100x850")
 app.configure(bg="#E8F5E9")  # Blanc cassé vert
 
 # Appliquer un thème
