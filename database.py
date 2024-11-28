@@ -1,4 +1,5 @@
 import sqlite3
+import os
 
 def init_db():
     """Initialise la base de données avec les tables si elles n'existent pas."""
@@ -99,10 +100,25 @@ def update_activite(activite_id, nom, description, lien):
 
 
 def delete_activite_by_id(activite_id):
-    """Supprime une activité par son ID."""
+    """Supprime une activité et ses images associées de la base de données."""
     with sqlite3.connect('gestion_activites.db') as conn:
         cursor = conn.cursor()
+
+        # Récupérer les chemins des images associées
+        cursor.execute("SELECT image_path FROM activite_images WHERE activite_id = ?", (activite_id,))
+        image_paths = cursor.fetchall()
+
+        # Supprimer les images du dossier
+        for image_path in image_paths:
+            if os.path.exists(image_path[0]):
+                os.remove(image_path[0])
+
+        # Supprimer les enregistrements des images de la base de données
+        cursor.execute("DELETE FROM activite_images WHERE activite_id = ?", (activite_id,))
+
+        # Supprimer l'activité de la base de données
         cursor.execute("DELETE FROM activites WHERE id = ?", (activite_id,))
+
         conn.commit()
 
 

@@ -17,6 +17,9 @@ objectif_comboboxes = []
 
 def add_objectif_combobox():
     """Ajoute un menu déroulant pour sélectionner un objectif."""
+    # Enregistrer les sélections actuelles
+    current_selections = [var.get() for var in objectif_vars]
+
     objectif_var = tk.StringVar()
     objectif_combobox = ttk.Combobox(objectifs_frame, textvariable=objectif_var, state="readonly", width=40, style='TCombobox')
     objectif_combobox.pack(pady=5)
@@ -24,6 +27,14 @@ def add_objectif_combobox():
     objectif_vars.append(objectif_var)
     objectif_comboboxes.append(objectif_combobox)
     refresh_objectifs()  # Met à jour les valeurs des menus déroulants
+
+    # Restaurer les sélections
+    for var, selection in zip(objectif_vars, current_selections):
+        var.set(selection)
+
+    # Lier l'événement <<ComboboxSelected>> à la fonction display_activities pour chaque combobox
+    for combobox in objectif_comboboxes:
+        combobox.bind("<<ComboboxSelected>>", lambda e: display_activities())
 
 
 def remove_objectif_combobox():
@@ -378,24 +389,22 @@ def add_new_activity():
     activite_window.grid_columnconfigure(0, weight=1)
   
 def delete_activity():
+    """Supprime l'activité sélectionnée."""
     selected_activity_index = listbox.curselection()
     if not selected_activity_index:
         messagebox.showerror("Erreur", "Veuillez sélectionner une activité à supprimer.")
         return
-    
     selected_activity_name = listbox.get(selected_activity_index)
-    activite_id = activity_name_to_id[selected_activity_name]  # Récupérer l'ID de l'activité à partir du dictionnaire
+    try:
+        activite_id = activity_name_to_id[selected_activity_name]  # Récupérer l'ID de l'activité à partir du dictionnaire
+    except KeyError:
+        messagebox.showerror("Erreur", "L'activité sélectionnée est invalide.")
+        return
 
-    # Demande de confirmation
-    confirmation = messagebox.askyesno(
-        "Confirmation",
-        f"Êtes-vous sûr de vouloir supprimer l'activité suivante ?\n\n{selected_activity_name}"
-    )
-    
-    if confirmation:
-        delete_activite_by_id(activite_id)  # Supprime l'activité
-        listbox.delete(selected_activity_index)  # Retire l'activité de l'interface
-        messagebox.showinfo("Succès", "Activité supprimée avec succès.")
+    if messagebox.askyesno("Confirmation", "Êtes-vous sûr de vouloir supprimer cette activité ?"):
+        delete_activite_by_id(activite_id)  # Supprimer l'activité et ses images associées
+        display_activities()  # Rafraîchir la liste des activités
+        messagebox.showinfo("Succès", "L'activité a été supprimée avec succès.")
 
 def delete_selected_objectif():
     """Supprime l'objectif sélectionné et ses activités associées."""
@@ -492,11 +501,11 @@ add_objectif_combobox()
 
 # Bouton pour ajouter un menu déroulant
 add_objectif_button = ttk.Button(top_frame, text="Plus", command=add_objectif_combobox, style='TButton')
-add_objectif_button.pack(side=tk.LEFT, padx=10)
+add_objectif_button.pack(side=tk.LEFT, padx=5)
 
 # Bouton pour enlever un menu déroulant
 remove_objectif_button = ttk.Button(top_frame, text="Moins", command=remove_objectif_combobox, style='TButton')
-remove_objectif_button.pack(side=tk.LEFT, padx=10)
+remove_objectif_button.pack(side=tk.LEFT, padx=5)
 
 # Bouton pour supprimer un objectif
 delete_objectif_button = ttk.Button(top_frame, text="Supprimer l'Objectif", command=delete_selected_objectif, style='TButton')
