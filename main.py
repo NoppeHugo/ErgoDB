@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, PhotoImage
 from tkinterdnd2 import DND_FILES, TkinterDnD
-from database import delete_objectif, init_db, fetch_objectifs, fetch_activites_by_objectifs, add_objectif, add_activite, update_activite, delete_activite_by_id, fetch_activity_by_id, fetch_objectif_by_id, update_activity_images, update_activity_objectifs
+from database import delete_objectif, init_db, fetch_objectifs, fetch_activites_by_objectifs, add_objectif, add_activite, update_activite, delete_activite_by_id, fetch_activity_by_id, fetch_objectif_by_id, update_activity_images, update_activity_objectifs, fetch_all_activites
 from PIL import Image, ImageTk
 import os
 import shutil
@@ -42,7 +42,9 @@ def refresh_objectifs():
     for objectif_var in objectif_vars:
         objectif_var.set("")
     for objectif_combobox in objectif_comboboxes:
-        objectif_combobox['values'] = [f"{obj[0]} - {obj[1]}" for obj in objectifs]
+        objectif_combobox['values'] = ["Toutes les activités"] + [f"{obj[0]} - {obj[1]}" for obj in objectifs]
+
+
 
 def display_activities():
     """Affiche les activités correspondant aux objectifs sélectionnés."""
@@ -52,6 +54,9 @@ def display_activities():
     objectif_ids = []
     for objectif_var in objectif_vars:
         objectif = objectif_var.get()
+        if objectif == "Toutes les activités":
+            activites = fetch_all_activites()
+            break
         if objectif:
             try:
                 objectif_id = objectif_name_to_id[objectif]  # Récupérer l'ID de l'objectif à partir du dictionnaire
@@ -60,11 +65,13 @@ def display_activities():
                 messagebox.showerror("Erreur", "L'objectif sélectionné est invalide.")
                 return
 
-    if not objectif_ids:
+    if not objectif_ids and objectif != "Toutes les activités":
         listbox.delete(0, tk.END)
         return
 
-    activites = fetch_activites_by_objectifs(objectif_ids)
+    if objectif != "Toutes les activités":
+        activites = fetch_activites_by_objectifs(objectif_ids)
+
     activity_name_to_id.clear()  # Vider le dictionnaire avant de le remplir
 
     # Afficher les noms des activités
@@ -72,7 +79,7 @@ def display_activities():
     for activite in activites:
         activity_name_to_id[f"{activite[0]} - {activite[1]}"] = activite[0]
         listbox.insert(tk.END, f"{activite[0]} - {activite[1]}")  # Afficher l'ID et le nom
-        
+
 def view_activity_details(event):
     selected_activity_index = listbox.curselection()
     if not selected_activity_index:
@@ -399,15 +406,28 @@ def delete_selected_objectif():
         messagebox.showerror("Erreur", "Veuillez sélectionner un objectif à supprimer.")
         return
     try:
-        objectif_id = int(objectif.split(" - ")[0])  # Récupérer l'ID de l'objectif
-    except ValueError:
-        messagebox.showerror("Erreur", "L'ID de l'objectif est invalide.")
+        objectif_id = objectif_name_to_id[objectif]  # Récupérer l'ID de l'objectif
+    except KeyError:
+        messagebox.showerror("Erreur", "L'objectif sélectionné est invalide.")
         return
-    if messagebox.askyesno("Confirmation", "Êtes-vous sûr de vouloir supprimer cet objectif et toutes ses activités associées ?"):
+
+    # Récupérer les activités associées à l'objectif
+    activites = fetch_activites_by_objectifs([objectif_id])
+    activites_list = "\n".join([f"{activite[0]} - {activite[1]}" for activite in activites])
+
+    if not activites_list:
+        activites_list = "Aucune activité associée."
+
+    confirmation_message = (
+        f"Êtes-vous sûr de vouloir supprimer l'objectif suivant et toutes ses activités associées ?\n\n"
+        f"Objectif : {objectif}\n\n"
+        f"Activités associées :\n{activites_list}"
+    )
+
+    if messagebox.askyesno("Confirmation", confirmation_message):
         delete_objectif(objectif_id)  # Supprimer l'objectif et ses activités associées
         refresh_objectifs()  # Mettre à jour la liste des objectifs
         listbox.delete(0, tk.END)  # Vider la liste des activités
-
 
 # Configuration de l'interface utilisateur
 app = TkinterDnD.Tk()

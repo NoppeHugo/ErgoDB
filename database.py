@@ -56,12 +56,14 @@ def fetch_activites_by_objectifs(objectif_ids):
     with sqlite3.connect('gestion_activites.db') as conn:
         cursor = conn.cursor()
         query = '''
-            SELECT DISTINCT a.id, a.nom 
+            SELECT a.id, a.nom
             FROM activites a
             JOIN activite_objectifs ao ON a.id = ao.activite_id
             WHERE ao.objectif_id IN ({seq})
+            GROUP BY a.id, a.nom
+            HAVING COUNT(DISTINCT ao.objectif_id) = ?
         '''.format(seq=','.join(['?']*len(objectif_ids)))
-        cursor.execute(query, objectif_ids)
+        cursor.execute(query, objectif_ids + [len(objectif_ids)])
         return cursor.fetchall()
 
 def add_activite(nom, description, lien, objectif_ids, image_paths):
@@ -159,3 +161,10 @@ def update_activity_objectifs(activity_id, new_objectifs):
         for objectif_id in new_objectifs:
             cursor.execute(insert_objectif_query, (activity_id, objectif_id))
         conn.commit()
+
+def fetch_all_activites():
+    """Récupère toutes les activités."""
+    with sqlite3.connect('gestion_activites.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, nom FROM activites")
+        return cursor.fetchall()
