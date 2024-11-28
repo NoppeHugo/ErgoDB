@@ -25,6 +25,7 @@ def add_objectif_combobox():
     objectif_comboboxes.append(objectif_combobox)
     refresh_objectifs()  # Met à jour les valeurs des menus déroulants
 
+
 def remove_objectif_combobox():
     """Enlève le dernier menu déroulant ajouté pour sélectionner un objectif."""
     if objectif_comboboxes:
@@ -259,26 +260,26 @@ def open_activity_window(activity):
 def add_new_objectif():
     """Ajoute un nouvel objectif dans la base de données."""
     def save_objectif():
-        nom = objectif_name.get()
+        nom = objectif_name.get().strip()
         if not nom:
             messagebox.showerror("Erreur", "Le nom de l'objectif est requis.")
             return
         add_objectif(nom)
-        messagebox.showinfo("Succès", "Objectif ajouté avec succès.")
-        refresh_objectifs()  # Met à jour la combobox
+        refresh_objectifs()
         objectif_window.destroy()
 
     objectif_window = tk.Toplevel(app)
     objectif_window.title("Ajouter un Objectif")
-    objectif_window.geometry("500x300")
-    objectif_window.configure(bg=background_color)
+    objectif_window.configure(bg=background_color)  # Appliquer la couleur de fond
 
-    tk.Label(objectif_window, text="Nom de l'objectif :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
-    objectif_name = tk.Entry(objectif_window, bg=secondary_color, fg='black', font=('Helvetica', 10),width=50)
+    tk.Label(objectif_window, text="Nom de l'objectif :", bg=background_color, fg='black', font=('Helvetica', 12), height=3, width=50).pack(pady=5)
+    objectif_name = tk.Entry(objectif_window, bg=secondary_color, fg='black', font=('Helvetica', 10), width=50)
     objectif_name.pack(pady=5)
 
-    tk.Button(objectif_window, text="Enregistrer", command=save_objectif, bg=primary_color, fg=secondary_color, font=('Helvetica', 10, 'bold')).pack(pady=10)
+    # Lier l'événement <Return> à la fonction save_objectif
+    objectif_name.bind("<Return>", lambda event: save_objectif())
 
+    tk.Button(objectif_window, text="Enregistrer", command=save_objectif, bg=primary_color, fg=secondary_color, font=('Helvetica', 10, 'bold')).pack(pady=10)
 
 def save_activity():
     nom = activite_name.get().strip()
@@ -429,6 +430,24 @@ def delete_selected_objectif():
         refresh_objectifs()  # Mettre à jour la liste des objectifs
         listbox.delete(0, tk.END)  # Vider la liste des activités
 
+def search_activities(search_term):
+    """Recherche les activités par titre."""
+    if not search_term:
+        messagebox.showerror("Erreur", "Veuillez entrer un terme de recherche.")
+        return
+
+    activites = fetch_all_activites()
+    activity_name_to_id.clear()  # Vider le dictionnaire avant de le remplir
+
+    # Filtrer les activités par titre
+    filtered_activites = [activite for activite in activites if search_term.lower() in activite[1].lower()]
+
+    # Afficher les noms des activités filtrées
+    listbox.delete(0, tk.END)
+    for activite in filtered_activites:
+        activity_name_to_id[f"{activite[0]} - {activite[1]}"] = activite[0]
+        listbox.insert(tk.END, f"{activite[0]} - {activite[1]}")  # Afficher l'ID et le nom
+
 # Configuration de l'interface utilisateur
 app = TkinterDnD.Tk()
 app.title("Ergothérapie - Gestion des Activités")
@@ -487,6 +506,19 @@ delete_objectif_button.pack(side=tk.LEFT, padx=10)
 add_new_objectif_button = ttk.Button(top_frame, text="Ajouter un Objectif", command=add_new_objectif, style='TButton')
 add_new_objectif_button.pack(side=tk.LEFT, padx=10)
 
+# Barre de recherche
+search_frame = ttk.Frame(app, style='TFrame')
+search_frame.pack(pady=10)
+
+search_var = tk.StringVar()
+search_entry = ttk.Entry(search_frame, textvariable=search_var, width=40)
+search_entry.pack(side=tk.LEFT, padx=10)
+
+# Lier l'événement <Return> à la fonction search_activities
+search_entry.bind("<Return>", lambda event: search_activities(search_var.get()))
+
+search_button = ttk.Button(search_frame, text="Rechercher", command=lambda: search_activities(search_var.get()), style='TButton')
+search_button.pack(side=tk.LEFT, padx=10)
 # Liste des activités
 listbox = tk.Listbox(app, width=80, height=10, bg=secondary_color, fg='black', font=('Helvetica', 10))
 listbox.pack(pady=20)
