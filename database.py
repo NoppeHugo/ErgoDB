@@ -1,6 +1,29 @@
 import sqlite3
 import os
+import shutil
+import datetime
+import shutil
+import datetime
 
+def backup_db():
+    """Crée un backup de la base de données."""
+    backup_dir = 'backups'
+    if not os.path.exists(backup_dir):
+        os.makedirs(backup_dir)
+    timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+    backup_path = os.path.join(backup_dir, f'gestion_activites_{timestamp}.db')
+    shutil.copy('gestion_activites.db', backup_path)
+
+def load_latest_backup():
+    """Charge le dernier backup de la base de données."""
+    backup_dir = 'backups'
+    if not os.path.exists(backup_dir):
+        return  # Pas de backup disponible
+    backups = sorted(os.listdir(backup_dir), reverse=True)
+    if backups:
+        latest_backup = os.path.join(backup_dir, backups[0])
+        shutil.copy(latest_backup, 'gestion_activites.db')
+        
 def init_db():
     """Initialise la base de données avec les tables si elles n'existent pas."""
     with sqlite3.connect('gestion_activites.db') as conn:
