@@ -1,45 +1,93 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, PhotoImage
 from tkinterdnd2 import DND_FILES, TkinterDnD
-from database import delete_objectif, init_db, fetch_objectifs, fetch_activites_by_objectif, add_objectif, add_activite, update_activite, delete_activite_by_id, fetch_activity_by_id, fetch_objectif_by_id
+from database import delete_objectif, init_db, fetch_objectifs, fetch_activites_by_objectifs, add_objectif, add_activite, update_activite, delete_activite_by_id, fetch_activity_by_id, fetch_objectif_by_id, update_activity_images, update_activity_objectifs
 from PIL import Image, ImageTk
 import os
 import shutil
+import webbrowser
 
 
 # Initialisation de la base de données
 init_db()
+activity_name_to_id = {}
+objectif_name_to_id = {}
+objectif_vars = []
+objectif_comboboxes = []
+
+def add_objectif_combobox():
+    """Ajoute un menu déroulant pour sélectionner un objectif."""
+    objectif_var = tk.StringVar()
+    objectif_combobox = ttk.Combobox(objectifs_frame, textvariable=objectif_var, state="readonly", width=40, style='TCombobox')
+    objectif_combobox.pack(pady=5)
+    objectif_combobox.bind("<<ComboboxSelected>>", lambda e: display_activities())
+    objectif_vars.append(objectif_var)
+    objectif_comboboxes.append(objectif_combobox)
+    refresh_objectifs()  # Met à jour les valeurs des menus déroulants
+
+def remove_objectif_combobox():
+    """Enlève le dernier menu déroulant ajouté pour sélectionner un objectif."""
+    if objectif_comboboxes:
+        combobox = objectif_comboboxes.pop()
+        combobox.destroy()
+        objectif_vars.pop()
+        display_activities()  # Met à jour les activités affichées
 
 def refresh_objectifs():
-    """Met à jour la liste des objectifs dans le menu déroulant."""
+    """Met à jour la liste des objectifs dans les menus déroulants."""
     objectifs = fetch_objectifs()
-    objectif_combobox['values'] = [f"{obj[0]} - {obj[1]}" for obj in objectifs]
-    objectif_var.set("")  # Réinitialise la sélection actuelle
+    objectif_name_to_id.clear()  # Vider le dictionnaire avant de le remplir
+    for obj in objectifs:
+        objectif_name_to_id[f"{obj[0]} - {obj[1]}"] = obj[0]
+    for objectif_var in objectif_vars:
+        objectif_var.set("")
+    for objectif_combobox in objectif_comboboxes:
+        objectif_combobox['values'] = [f"{obj[0]} - {obj[1]}" for obj in objectifs]
 
 def display_activities():
-    """Affiche les activités correspondant à l'objectif sélectionné."""
-    objectif = objectif_var.get()
-    if not objectif:
+    """Affiche les activités correspondant aux objectifs sélectionnés."""
+    if not objectif_vars:
+        return
+
+    objectif_ids = []
+    for objectif_var in objectif_vars:
+        objectif = objectif_var.get()
+        if objectif:
+            try:
+                objectif_id = objectif_name_to_id[objectif]  # Récupérer l'ID de l'objectif à partir du dictionnaire
+                objectif_ids.append(objectif_id)
+            except KeyError:
+                messagebox.showerror("Erreur", "L'objectif sélectionné est invalide.")
+                return
+
+    if not objectif_ids:
         listbox.delete(0, tk.END)
         return
 
-    objectif_id = int(objectif.split(" - ")[0])  # Récupérer l'ID de l'objectif
-    activites = fetch_activites_by_objectif(objectif_id)
+    activites = fetch_activites_by_objectifs(objectif_ids)
+    activity_name_to_id.clear()  # Vider le dictionnaire avant de le remplir
 
     # Afficher les noms des activités
     listbox.delete(0, tk.END)
     for activite in activites:
+        activity_name_to_id[f"{activite[0]} - {activite[1]}"] = activite[0]
         listbox.insert(tk.END, f"{activite[0]} - {activite[1]}")  # Afficher l'ID et le nom
-
+        
 def view_activity_details(event):
     selected_activity_index = listbox.curselection()
     if not selected_activity_index:
         return
-    selected_activity = listbox.get(selected_activity_index)
-    activite_id = int(selected_activity.split(" - ")[0])  # Récupérer l'ID de l'activité
+    selected_activity_name = listbox.get(selected_activity_index)
+    try:
+        activite_id = activity_name_to_id[selected_activity_name]  # Récupérer l'ID de l'activité à partir du dictionnaire
+    except KeyError:
+        messagebox.showerror("Erreur", "L'activité sélectionnée est invalide.")
+        return
     activity = fetch_activity_by_id(activite_id)  # Récupérer les détails de l'activité
     open_activity_window(activity)
 
+
+        
 def open_activity_window(activity):
     def toggle_edit():
         state = "normal" if name_entry["state"] == "disabled" else "disabled"
@@ -47,18 +95,78 @@ def open_activity_window(activity):
         desc_entry.config(state=state)
         link_entry.config(state=state)
         save_button.config(state=state)
+        add_image_button.config(state=state)
+        remove_image_button.config(state=state)
+        objectifs_listbox.config(state=state)
+        
+        if state == "normal":
+            link_entry.pack(pady=5)  # Afficher la case pour écrire le lien
+            if link_label.winfo_ismapped():
+                link_label.pack_forget()  # Masquer le label du lien
+            # Afficher tous les objectifs dans la liste
+            objectifs_listbox.delete(0, tk.END)
+            objectifs = fetch_objectifs()
+            for obj in objectifs:
+                objectifs_listbox.insert(tk.END, f"{obj[0]} - {obj[1]}")
+                if obj[0] in activity['objectifs']:
+                    objectifs_listbox.selection_set(tk.END)
+        else:
+            link_entry.pack_forget()  # Masquer la case pour écrire le lien
+            if activity['lien']:
+                link_label.pack(pady=5)  # Afficher le label du lien
+            # Afficher uniquement les objectifs de l'activité
+            objectifs_listbox.delete(0, tk.END)
+            for objectif_id in activity['objectifs']:
+                objectif = fetch_objectif_by_id(objectif_id)
+                objectifs_listbox.insert(tk.END, f"{objectif_id} - {objectif['nom']}")
+                objectifs_listbox.selection_set(tk.END)
 
     def save_changes():
         new_name = name_var.get()
         new_desc = desc_entry.get("1.0", tk.END).strip()  # Récupérer le texte du widget Text
         new_link = link_var.get()
+        new_images = [img_label.cget("text") for img_label in image_labels]
+        selected_objectifs = objectifs_listbox.curselection()
+        objectif_ids = [int(objectifs_listbox.get(i).split(" - ")[0]) for i in selected_objectifs]
         if not new_name:
             messagebox.showerror("Erreur", "Le nom de l'activité est requis.")
             return
         update_activite(activity['id'], new_name, new_desc, new_link)  # ID de l'activité
+        update_activity_images(activity['id'], new_images)  # Mettre à jour les images
+        update_activity_objectifs(activity['id'], objectif_ids)  # Mettre à jour les objectifs
         messagebox.showinfo("Succès", "Modifications enregistrées.")
         display_activities()  # Rafraîchit la liste des activités
         activity_window.destroy()
+
+    def add_images():
+        file_paths = filedialog.askopenfilenames(filetypes=[("Image files", "*.jpg *.jpeg *.png")])
+        if file_paths:
+            for file_path in file_paths:
+                img = Image.open(file_path)
+                img.thumbnail((225, 225), Image.Resampling.LANCZOS)  # Augmenter la taille de 50%
+                img = ImageTk.PhotoImage(img)
+                img_label = tk.Label(images_frame, image=img, text=file_path, bg=background_color)
+                img_label.image = img  # Keep a reference to avoid garbage collection
+                img_label.pack(side=tk.LEFT, padx=5)
+                img_label.bind("<Button-1>", lambda e, label=img_label: select_image(label))
+                image_labels.append(img_label)
+
+    def remove_selected_images():
+        for img_label in selected_images:
+            img_label.destroy()
+            image_labels.remove(img_label)
+        selected_images.clear()
+
+    def select_image(label):
+        if label in selected_images:
+            selected_images.remove(label)
+            label.config(bg=background_color)
+        else:
+            selected_images.append(label)
+            label.config(bg="red")
+
+    def open_link(event, url):
+        webbrowser.open_new(url)
 
     # Création de la fenêtre
     activity_window = tk.Toplevel(app)
@@ -75,38 +183,68 @@ def open_activity_window(activity):
     tk.Label(activity_window, text="Objectifs :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
     objectifs_frame = tk.Frame(activity_window, bg=background_color)
     objectifs_frame.pack(pady=5)
+    objectifs_listbox = tk.Listbox(objectifs_frame, selectmode=tk.MULTIPLE, bg=secondary_color, fg='black', font=('Helvetica', 10), width=70, height=5)
     for objectif_id in activity['objectifs']:
-        objectif = fetch_objectif_by_id(objectif_id)  # Assurez-vous d'avoir une fonction fetch_objectif_by_id
-        tk.Label(objectifs_frame, text=objectif['nom'], bg=background_color, fg='black', font=('Helvetica', 10)).pack(pady=2)
+        objectif = fetch_objectif_by_id(objectif_id)
+        objectifs_listbox.insert(tk.END, f"{objectif_id} - {objectif['nom']}")
+        objectifs_listbox.selection_set(tk.END)
+    objectifs_listbox.pack(pady=5)
 
     # Frame pour les images
     images_frame = tk.Frame(activity_window, bg=background_color)
     images_frame.pack(pady=5)
 
+    tk.Label(activity_window, text="Images :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
+    image_labels = []
+    selected_images = []
     for image_path in activity['images']:
         img = Image.open(image_path)
-        img.thumbnail((200, 200), Image.Resampling.LANCZOS)  # Conserve le ratio d'aspect
+        img.thumbnail((225, 225), Image.Resampling.LANCZOS)  # Augmenter la taille de 50%
         img = ImageTk.PhotoImage(img)
-        img_label = tk.Label(images_frame, image=img, bg=background_color)
+        img_label = tk.Label(images_frame, image=img, text=image_path, bg=background_color)
         img_label.image = img  # Keep a reference to avoid garbage collection
         img_label.pack(side=tk.LEFT, padx=5)
+        img_label.bind("<Button-1>", lambda e, label=img_label: select_image(label))
+        image_labels.append(img_label)
+
+    # Frame pour les boutons d'images
+    buttons_frame = tk.Frame(activity_window, bg=background_color)
+    buttons_frame.pack(pady=5)
+
+    add_image_button = tk.Button(buttons_frame, text="Ajouter", command=add_images, state="disabled", bg=primary_color, fg=secondary_color, font=('Helvetica', 10, 'bold'))
+    add_image_button.pack(side=tk.LEFT, padx=3)
+
+    remove_image_button = tk.Button(buttons_frame, text="Supprimer", command=remove_selected_images, state="disabled", bg=primary_color, fg=secondary_color, font=('Helvetica', 10, 'bold'))
+    remove_image_button.pack(side=tk.LEFT, padx=3)
 
     tk.Label(activity_window, text="Description :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
-    desc_entry = tk.Text(activity_window, height=15, width=100, bg=secondary_color, fg='black', font=('Helvetica', 10))
+    desc_entry = tk.Text(activity_window, height=7, width=100, bg=secondary_color, fg='black', font=('Helvetica', 10))
     desc_entry.insert(tk.END, activity['description'])
     desc_entry.config(state="disabled")
     desc_entry.pack(pady=5)
 
-    tk.Label(activity_window, text="Lien :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
+    # Frame pour le lien
+    link_frame = tk.Frame(activity_window, bg=background_color)
+    link_frame.pack(pady=5)
+
+    tk.Label(link_frame, text="Lien :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
     link_var = tk.StringVar(value=activity['lien'])
-    link_entry = tk.Entry(activity_window, textvariable=link_var, state="disabled", width=70, bg=secondary_color, fg='black', font=('Helvetica', 10))
-    link_entry.pack(pady=5)
+    link_entry = tk.Entry(link_frame, textvariable=link_var, state="disabled", width=70, bg=secondary_color, fg='black', font=('Helvetica', 10))
 
-    edit_button = tk.Button(activity_window, text="Modifier", command=toggle_edit, bg=primary_color, fg=secondary_color, font=('Helvetica', 10, 'bold'))
-    edit_button.pack(pady=10)
+    if activity['lien']:
+        link_label = tk.Label(link_frame, text=activity['lien'], bg=background_color, fg='blue', font=('Helvetica', 10), cursor="hand2")
+        link_label.pack(pady=5)
+        link_label.bind("<Button-1>", lambda event: open_link(event, activity['lien']))
 
-    save_button = tk.Button(activity_window, text="Enregistrer", command=save_changes, state="disabled", bg=primary_color, fg=secondary_color, font=('Helvetica', 10, 'bold'))
-    save_button.pack(pady=10)
+    # Frame pour les boutons de modification et d'enregistrement
+    edit_save_frame = tk.Frame(activity_window, bg=background_color)
+    edit_save_frame.pack(pady=10)
+
+    edit_button = tk.Button(edit_save_frame, text="Modifier", command=toggle_edit, bg=primary_color, fg=secondary_color, font=('Helvetica', 10, 'bold'))
+    edit_button.pack(side=tk.LEFT, padx=3)
+
+    save_button = tk.Button(edit_save_frame, text="Enregistrer", command=save_changes, state="disabled", bg=primary_color, fg=secondary_color, font=('Helvetica', 10, 'bold'))
+    save_button.pack(side=tk.LEFT, padx=3)
 
     # Lancer la fenêtre
     activity_window.mainloop()
@@ -129,7 +267,7 @@ def add_new_objectif():
     objectif_window.configure(bg=background_color)
 
     tk.Label(objectif_window, text="Nom de l'objectif :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
-    objectif_name = tk.Entry(objectif_window, bg=secondary_color, fg='black', font=('Helvetica', 10))
+    objectif_name = tk.Entry(objectif_window, bg=secondary_color, fg='black', font=('Helvetica', 10),width=50)
     objectif_name.pack(pady=5)
 
     tk.Button(objectif_window, text="Enregistrer", command=save_objectif, bg=primary_color, fg=secondary_color, font=('Helvetica', 10, 'bold')).pack(pady=10)
@@ -143,10 +281,14 @@ def save_activity():
     selected_objectifs = objectifs_listbox.curselection()
     objectif_ids = [int(objectifs_listbox.get(i).split(" - ")[0]) for i in selected_objectifs]
     
-    if not nom or not description or not lien or not image_paths or not objectif_ids:
-        messagebox.showerror("Erreur", "Veuillez remplir tous les champs.")
+    if not nom or not description or not objectif_ids:
+        messagebox.showerror("Erreur", "Veuillez remplir tous les champs obligatoires.")
         return
     
+    # Vérifier si des images ont été fournies
+    if image_paths == ['']:
+        image_paths = []
+
     add_activite(nom, description, lien, objectif_ids, image_paths)
     messagebox.showinfo("Succès", "Activité ajoutée avec succès.")
     display_activities()  # Met à jour la liste d'activités automatiquement
@@ -200,7 +342,7 @@ def add_new_activity():
     activite_name.pack(pady=5)
 
     tk.Label(activite_window, text="Description :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
-    activite_desc = tk.Text(activite_window, height=15, width=100, bg=secondary_color, fg='black', font=('Helvetica', 10))
+    activite_desc = tk.Text(activite_window, height=10, width=100, bg=secondary_color, fg='black', font=('Helvetica', 10))
     activite_desc.pack(pady=5)
 
     tk.Label(activite_window, text="Lien :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
@@ -208,7 +350,7 @@ def add_new_activity():
     activite_link.pack(pady=5)
 
     tk.Label(activite_window, text="Objectifs :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
-    objectifs_listbox = tk.Listbox(activite_window, selectmode=tk.MULTIPLE, bg=secondary_color, fg='black', font=('Helvetica', 10), width=70)
+    objectifs_listbox = tk.Listbox(activite_window, selectmode=tk.MULTIPLE, bg=secondary_color, fg='black', font=('Helvetica', 10), width=70, height=5)
     objectifs = fetch_objectifs()
     for obj in objectifs:
         objectifs_listbox.insert(tk.END, f"{obj[0]} - {obj[1]}")
@@ -226,7 +368,6 @@ def add_new_activity():
 
     # Configurer les poids des colonnes et des lignes
     activite_window.grid_columnconfigure(0, weight=1)
-    activite_window.grid_rowconfigure(3, weight=1)
   
 def delete_activity():
     selected_activity_index = listbox.curselection()
@@ -234,13 +375,13 @@ def delete_activity():
         messagebox.showerror("Erreur", "Veuillez sélectionner une activité à supprimer.")
         return
     
-    selected_activity = listbox.get(selected_activity_index)
-    activite_id = int(selected_activity.split(" - ")[0])  # Récupérer l'ID de l'activité
+    selected_activity_name = listbox.get(selected_activity_index)
+    activite_id = activity_name_to_id[selected_activity_name]  # Récupérer l'ID de l'activité à partir du dictionnaire
 
     # Demande de confirmation
     confirmation = messagebox.askyesno(
         "Confirmation",
-        f"Êtes-vous sûr de vouloir supprimer l'activité suivante ?\n\n{selected_activity}"
+        f"Êtes-vous sûr de vouloir supprimer l'activité suivante ?\n\n{selected_activity_name}"
     )
     
     if confirmation:
@@ -248,36 +389,24 @@ def delete_activity():
         listbox.delete(selected_activity_index)  # Retire l'activité de l'interface
         messagebox.showinfo("Succès", "Activité supprimée avec succès.")
 
-
 def delete_selected_objectif():
-    """Supprime l'objectif sélectionné avec confirmation, affichant d'abord les activités associées."""
-    objectif = objectif_var.get()
+    """Supprime l'objectif sélectionné et ses activités associées."""
+    if not objectif_vars:
+        messagebox.showerror("Erreur", "Veuillez sélectionner un objectif à supprimer.")
+        return
+    objectif = objectif_vars[0].get()
     if not objectif:
         messagebox.showerror("Erreur", "Veuillez sélectionner un objectif à supprimer.")
         return
-
-    objectif_id = int(objectif.split(" - ")[0])  # Récupérer l'ID de l'objectif
-    activites = fetch_activites_by_objectif(objectif_id)
-
-    if activites:
-        activites_text = "\n".join([f"{act[0]} - {act[1]}" for act in activites])
-        confirmation_text = (
-            f"L'objectif sélectionné contient les activités suivantes :\n\n{activites_text}\n\n"
-            "Êtes-vous sûr de vouloir supprimer cet objectif et toutes ses activités associées ?"
-        )
-    else:
-        confirmation_text = (
-            "L'objectif sélectionné ne contient aucune activité.\n\n"
-            "Êtes-vous sûr de vouloir le supprimer ?"
-        )
-
-    if messagebox.askyesno("Confirmation", confirmation_text):
+    try:
+        objectif_id = int(objectif.split(" - ")[0])  # Récupérer l'ID de l'objectif
+    except ValueError:
+        messagebox.showerror("Erreur", "L'ID de l'objectif est invalide.")
+        return
+    if messagebox.askyesno("Confirmation", "Êtes-vous sûr de vouloir supprimer cet objectif et toutes ses activités associées ?"):
         delete_objectif(objectif_id)  # Supprimer l'objectif et ses activités associées
         refresh_objectifs()  # Mettre à jour la liste des objectifs
         listbox.delete(0, tk.END)  # Vider la liste des activités
-        messagebox.showinfo("Succès", "Objectif et ses activités supprimés avec succès.")
-
-
 
 
 # Configuration de l'interface utilisateur
@@ -308,28 +437,35 @@ header_frame = ttk.Frame(app, style='TFrame')
 header_frame.pack(pady=20)
 
 # Ajouter un texte en haut
-header_label = ttk.Label(header_frame, text="Carla DB", style='TLabel', font=('Helvetica', 24, 'bold'))
+header_label = ttk.Label(header_frame, text="love you DB", style='TLabel', font=('Helvetica', 24, 'bold'))
 header_label.pack()
 
-# Frame pour le menu déroulant et le bouton
+# Frame pour les menus déroulants et les boutons
 top_frame = ttk.Frame(app, style='TFrame')
 top_frame.pack(pady=20)
 
-# Menu déroulant pour les objectifs
-objectif_var = tk.StringVar()
-objectif_combobox = ttk.Combobox(top_frame, textvariable=objectif_var, state="readonly", width=40, style='TCombobox')
-objectif_combobox.pack(side=tk.LEFT, padx=10)
+# Frame pour les menus déroulants des objectifs
+objectifs_frame = ttk.Frame(top_frame, style='TFrame')
+objectifs_frame.pack(side=tk.LEFT, padx=10)
+
+# Ajouter le premier menu déroulant pour les objectifs
+add_objectif_combobox()
+
+# Bouton pour ajouter un menu déroulant
+add_objectif_button = ttk.Button(top_frame, text="Plus", command=add_objectif_combobox, style='TButton')
+add_objectif_button.pack(side=tk.LEFT, padx=10)
+
+# Bouton pour enlever un menu déroulant
+remove_objectif_button = ttk.Button(top_frame, text="Moins", command=remove_objectif_combobox, style='TButton')
+remove_objectif_button.pack(side=tk.LEFT, padx=10)
 
 # Bouton pour supprimer un objectif
 delete_objectif_button = ttk.Button(top_frame, text="Supprimer l'Objectif", command=delete_selected_objectif, style='TButton')
 delete_objectif_button.pack(side=tk.LEFT, padx=10)
 
 # Bouton "Ajouter un Objectif"
-add_objectif_button = ttk.Button(top_frame, text="Ajouter un Objectif", command=add_new_objectif, style='TButton')
-add_objectif_button.pack(side=tk.LEFT, padx=10)
-
-# Lier l'événement de sélection d'un objectif à la mise à jour des activités
-objectif_combobox.bind("<<ComboboxSelected>>", lambda e: display_activities())
+add_new_objectif_button = ttk.Button(top_frame, text="Ajouter un Objectif", command=add_new_objectif, style='TButton')
+add_new_objectif_button.pack(side=tk.LEFT, padx=10)
 
 # Liste des activités
 listbox = tk.Listbox(app, width=80, height=10, bg=secondary_color, fg='black', font=('Helvetica', 10))

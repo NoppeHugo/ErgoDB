@@ -51,18 +51,18 @@ def delete_objectif(objectif_id):
         conn.commit()
 
 
-def fetch_activites_by_objectif(objectif_id):
-    """Récupère les activités correspondant à un objectif donné."""
+def fetch_activites_by_objectifs(objectif_ids):
+    """Récupère les activités correspondant à une liste d'objectifs donnés."""
     with sqlite3.connect('gestion_activites.db') as conn:
         cursor = conn.cursor()
-        cursor.execute('''
-            SELECT a.id, a.nom 
+        query = '''
+            SELECT DISTINCT a.id, a.nom 
             FROM activites a
             JOIN activite_objectifs ao ON a.id = ao.activite_id
-            WHERE ao.objectif_id = ?
-        ''', (objectif_id,))
+            WHERE ao.objectif_id IN ({seq})
+        '''.format(seq=','.join(['?']*len(objectif_ids)))
+        cursor.execute(query, objectif_ids)
         return cursor.fetchall()
-
 
 def add_activite(nom, description, lien, objectif_ids, image_paths):
     """Ajoute une nouvelle activité."""
@@ -134,3 +134,28 @@ def fetch_objectif_by_id(objectif_id):
         if row:
             return {'id': row[0], 'nom': row[1]}
         return None
+    
+def update_activity_images(activity_id, new_images):
+    """Met à jour les images d'une activité dans la base de données."""
+    # Supprimer les images existantes
+    delete_images_query = "DELETE FROM activite_images WHERE activite_id = ?"
+    insert_image_query = "INSERT INTO activite_images (activite_id, image_path) VALUES (?, ?)"
+
+    with sqlite3.connect('gestion_activites.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute(delete_images_query, (activity_id,))
+        for image_path in new_images:
+            cursor.execute(insert_image_query, (activity_id, image_path))
+        conn.commit()
+        
+def update_activity_objectifs(activity_id, new_objectifs):
+    """Met à jour les objectifs d'une activité dans la base de données."""
+    delete_objectifs_query = "DELETE FROM activite_objectifs WHERE activite_id = ?"
+    insert_objectif_query = "INSERT INTO activite_objectifs (activite_id, objectif_id) VALUES (?, ?)"
+    
+    with sqlite3.connect('gestion_activites.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute(delete_objectifs_query, (activity_id,))
+        for objectif_id in new_objectifs:
+            cursor.execute(insert_objectif_query, (activity_id, objectif_id))
+        conn.commit()
