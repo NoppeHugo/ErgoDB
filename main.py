@@ -286,7 +286,9 @@ def add_new_objectif():
 
     tk.Label(objectif_window, text="Nom de l'objectif :", bg=background_color, fg='black', font=('Helvetica', 12), height=3, width=50).pack(pady=5)
     objectif_name = tk.Entry(objectif_window, bg=secondary_color, fg='black', font=('Helvetica', 10), width=50)
+    objectif_name.focus_set()
     objectif_name.pack(pady=5)
+
 
     # Lier l'événement <Return> à la fonction save_objectif
     objectif_name.bind("<Return>", lambda event: save_objectif())
