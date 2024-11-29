@@ -195,15 +195,15 @@ def open_activity_window(activity):
     activity_window.configure(bg=background_color)
 
     # Widgets
-    tk.Label(activity_window, text="Nom de l'activité :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
+    tk.Label(activity_window, text="Nom de l'activité :", bg=background_color, fg='black', font=('Helvetica', 14)).pack(pady=5)
     name_var = tk.StringVar(value=activity['nom'])
-    name_entry = tk.Entry(activity_window, textvariable=name_var, state="disabled", width=70, bg=secondary_color, fg='black', font=('Helvetica', 10))
+    name_entry = tk.Entry(activity_window, textvariable=name_var, state="disabled", width=70, bg=secondary_color, fg='black', font=('Helvetica', 12))
     name_entry.pack(pady=5)
 
-    tk.Label(activity_window, text="Objectifs :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
+    tk.Label(activity_window, text="Objectifs :", bg=background_color, fg='black', font=('Helvetica', 14)).pack(pady=5)
     objectifs_frame = tk.Frame(activity_window, bg=background_color)
     objectifs_frame.pack(pady=5)
-    objectifs_listbox = tk.Listbox(objectifs_frame, selectmode=tk.MULTIPLE, bg=secondary_color, fg='black', font=('Helvetica', 10), width=70, height=5)
+    objectifs_listbox = tk.Listbox(objectifs_frame, selectmode=tk.MULTIPLE, bg=secondary_color, fg='black', font=('Helvetica', 12), width=70, height=5)
     for objectif_id in activity['objectifs']:
         objectif = fetch_objectif_by_id(objectif_id)
         objectifs_listbox.insert(tk.END, f"{objectif_id} - {objectif['nom']}")
@@ -214,7 +214,7 @@ def open_activity_window(activity):
     images_frame = tk.Frame(activity_window, bg=background_color)
     images_frame.pack(pady=5)
 
-    tk.Label(activity_window, text="Images :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
+    tk.Label(activity_window, text="Images :", bg=background_color, fg='black', font=('Helvetica', 14)).pack(pady=5)
     image_labels = []
     selected_images = []
     for image_path in activity['images']:
@@ -231,14 +231,14 @@ def open_activity_window(activity):
     buttons_frame = tk.Frame(activity_window, bg=background_color)
     buttons_frame.pack(pady=5)
 
-    add_image_button = tk.Button(buttons_frame, text="Ajouter", command=add_images, state="disabled", bg=primary_color, fg=secondary_color, font=('Helvetica', 10, 'bold'))
+    add_image_button = tk.Button(buttons_frame, text="Ajouter", command=add_images, state="disabled", bg=primary_color, fg=secondary_color, font=('Helvetica', 12, 'bold'))
     add_image_button.pack(side=tk.LEFT, padx=3)
 
-    remove_image_button = tk.Button(buttons_frame, text="Supprimer", command=remove_selected_images, state="disabled", bg=primary_color, fg=secondary_color, font=('Helvetica', 10, 'bold'))
+    remove_image_button = tk.Button(buttons_frame, text="Supprimer", command=remove_selected_images, state="disabled", bg=primary_color, fg=secondary_color, font=('Helvetica', 12, 'bold'))
     remove_image_button.pack(side=tk.LEFT, padx=3)
 
-    tk.Label(activity_window, text="Description :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
-    desc_entry = tk.Text(activity_window, height=7, width=100, bg=secondary_color, fg='black', font=('Helvetica', 10))
+    tk.Label(activity_window, text="Description :", bg=background_color, fg='black', font=('Helvetica', 14)).pack(pady=5)
+    desc_entry = tk.Text(activity_window, height=7, width=100, bg=secondary_color, fg='black', font=('Helvetica', 12))
     desc_entry.insert(tk.END, activity['description'])
     desc_entry.config(state="disabled")
     desc_entry.pack(pady=5)
@@ -247,12 +247,12 @@ def open_activity_window(activity):
     link_frame = tk.Frame(activity_window, bg=background_color)
     link_frame.pack(pady=5)
 
-    tk.Label(link_frame, text="Lien :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
+    tk.Label(link_frame, text="Lien :", bg=background_color, fg='black', font=('Helvetica', 14)).pack(pady=5)
     link_var = tk.StringVar(value=activity['lien'])
-    link_entry = tk.Entry(link_frame, textvariable=link_var, state="disabled", width=70, bg=secondary_color, fg='black', font=('Helvetica', 10))
+    link_entry = tk.Entry(link_frame, textvariable=link_var, state="disabled", width=70, bg=secondary_color, fg='black', font=('Helvetica', 12))
 
     if activity['lien']:
-        link_label = tk.Label(link_frame, text=activity['lien'], bg=background_color, fg='blue', font=('Helvetica', 10), cursor="hand2")
+        link_label = tk.Label(link_frame, text=activity['lien'], bg=background_color, fg='blue', font=('Helvetica', 12), cursor="hand2")
         link_label.pack(pady=5)
         link_label.bind("<Button-1>", lambda event: open_link(event, activity['lien']))
 
@@ -260,10 +260,10 @@ def open_activity_window(activity):
     edit_save_frame = tk.Frame(activity_window, bg=background_color)
     edit_save_frame.pack(pady=10)
 
-    edit_button = tk.Button(edit_save_frame, text="Modifier", command=toggle_edit, bg=primary_color, fg=secondary_color, font=('Helvetica', 10, 'bold'))
+    edit_button = tk.Button(edit_save_frame, text="Modifier", command=toggle_edit, bg=primary_color, fg=secondary_color, font=('Helvetica', 12, 'bold'))
     edit_button.pack(side=tk.LEFT, padx=3)
 
-    save_button = tk.Button(edit_save_frame, text="Enregistrer", command=save_changes, state="disabled", bg=primary_color, fg=secondary_color, font=('Helvetica', 10, 'bold'))
+    save_button = tk.Button(edit_save_frame, text="Enregistrer", command=save_changes, state="disabled", bg=primary_color, fg=secondary_color, font=('Helvetica', 12, 'bold'))
     save_button.pack(side=tk.LEFT, padx=3)
 
     # Lancer la fenêtre
@@ -284,8 +284,8 @@ def add_new_objectif():
     objectif_window.title("Ajouter un Objectif")
     objectif_window.configure(bg=background_color)  # Appliquer la couleur de fond
 
-    tk.Label(objectif_window, text="Nom de l'objectif :", bg=background_color, fg='black', font=('Helvetica', 12), height=3, width=50).pack(pady=5)
-    objectif_name = tk.Entry(objectif_window, bg=secondary_color, fg='black', font=('Helvetica', 10), width=50)
+    tk.Label(objectif_window, text="Nom de l'objectif :", bg=background_color, fg='black', font=('Helvetica', 14), height=3, width=50).pack(pady=5)
+    objectif_name = tk.Entry(objectif_window, bg=secondary_color, fg='black', font=('Helvetica', 12), width=50)
     objectif_name.focus_set()
     objectif_name.pack(pady=5)
 
@@ -293,7 +293,7 @@ def add_new_objectif():
     # Lier l'événement <Return> à la fonction save_objectif
     objectif_name.bind("<Return>", lambda event: save_objectif())
 
-    tk.Button(objectif_window, text="Enregistrer", command=save_objectif, bg=primary_color, fg=secondary_color, font=('Helvetica', 10, 'bold')).pack(pady=10)
+    tk.Button(objectif_window, text="Enregistrer", command=save_objectif, bg=primary_color, fg=secondary_color, font=('Helvetica', 12, 'bold')).pack(pady=10)
 
 def save_activity():
     nom = activite_name.get().strip()
@@ -359,34 +359,34 @@ def add_new_activity():
     activite_window.geometry("1100x850")
     activite_window.configure(bg=background_color)
 
-    tk.Label(activite_window, text="Nom de l'activité :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
-    activite_name = tk.Entry(activite_window, bg=secondary_color, fg='black', font=('Helvetica', 10), width=70)
+    tk.Label(activite_window, text="Nom de l'activité :", bg=background_color, fg='black', font=('Helvetica', 14)).pack(pady=5)
+    activite_name = tk.Entry(activite_window, bg=secondary_color, fg='black', font=('Helvetica', 12), width=70)
     activite_name.pack(pady=5)
 
-    tk.Label(activite_window, text="Description :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
-    activite_desc = tk.Text(activite_window, height=10, width=100, bg=secondary_color, fg='black', font=('Helvetica', 10))
+    tk.Label(activite_window, text="Description :", bg=background_color, fg='black', font=('Helvetica', 14)).pack(pady=5)
+    activite_desc = tk.Text(activite_window, height=10, width=100, bg=secondary_color, fg='black', font=('Helvetica', 12))
     activite_desc.pack(pady=5)
 
-    tk.Label(activite_window, text="Lien :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
-    activite_link = tk.Entry(activite_window, bg=secondary_color, fg='black', font=('Helvetica', 10), width=70)
+    tk.Label(activite_window, text="Lien :", bg=background_color, fg='black', font=('Helvetica', 14)).pack(pady=5)
+    activite_link = tk.Entry(activite_window, bg=secondary_color, fg='black', font=('Helvetica', 12), width=70)
     activite_link.pack(pady=5)
 
-    tk.Label(activite_window, text="Objectifs :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
-    objectifs_listbox = tk.Listbox(activite_window, selectmode=tk.MULTIPLE, bg=secondary_color, fg='black', font=('Helvetica', 10), width=70, height=5)
+    tk.Label(activite_window, text="Objectifs :", bg=background_color, fg='black', font=('Helvetica', 14)).pack(pady=5)
+    objectifs_listbox = tk.Listbox(activite_window, selectmode=tk.MULTIPLE, bg=secondary_color, fg='black', font=('Helvetica', 12), width=70, height=5)
     objectifs = fetch_objectifs()
     for obj in objectifs:
         objectifs_listbox.insert(tk.END, f"{obj[0]} - {obj[1]}")
     objectifs_listbox.pack(pady=5)
 
-    tk.Label(activite_window, text="Images :", bg=background_color, fg='black', font=('Helvetica', 12)).pack(pady=5)
+    tk.Label(activite_window, text="Images :", bg=background_color, fg='black', font=('Helvetica', 14)).pack(pady=5)
     activite_image_paths = tk.StringVar()
-    image_text = tk.Text(activite_window, height=5, width=70, bg=secondary_color, fg='black', font=('Helvetica', 10))
+    image_text = tk.Text(activite_window, height=5, width=70, bg=secondary_color, fg='black', font=('Helvetica', 12))
     image_text.pack(pady=5)
     image_text.drop_target_register(DND_FILES)
     image_text.dnd_bind('<<Drop>>', drop)
-    tk.Button(activite_window, text="Sélectionner des images", command=select_images, bg=primary_color, fg=secondary_color, font=('Helvetica', 10, 'bold')).pack(pady=5)
+    tk.Button(activite_window, text="Sélectionner des images", command=select_images, bg=primary_color, fg=secondary_color, font=('Helvetica', 12, 'bold')).pack(pady=5)
 
-    tk.Button(activite_window, text="Enregistrer", command=save_activity, bg=primary_color, fg=secondary_color, font=('Helvetica', 10, 'bold')).pack(pady=10)
+    tk.Button(activite_window, text="Enregistrer", command=save_activity, bg=primary_color, fg=secondary_color, font=('Helvetica', 12, 'bold')).pack(pady=10)
 
     # Configurer les poids des colonnes et des lignes
     activite_window.grid_columnconfigure(0, weight=1)
@@ -482,10 +482,10 @@ background_color = "#E8F5E9"  # Blanc cassé vert
 
 # Créer des styles personnalisés
 style.configure('TFrame', background=background_color)
-style.configure('TButton', background=primary_color, foreground=secondary_color, font=('Helvetica', 10, 'bold'), borderwidth=0, focuscolor=accent_color)
-style.configure('TCombobox', background=secondary_color, foreground='black', font=('Helvetica', 10))
-style.configure('TLabel', background=background_color, foreground='black', font=('Helvetica', 12))
-style.configure('TListbox', background=secondary_color, foreground='black', font=('Helvetica', 10))
+style.configure('TButton', background=primary_color, foreground=secondary_color, font=('Helvetica', 12, 'bold'), borderwidth=0, focuscolor=accent_color)
+style.configure('TCombobox', background=secondary_color, foreground='black', font=('Helvetica', 12))
+style.configure('TLabel', background=background_color, foreground='black', font=('Helvetica', 14))
+style.configure('TListbox', background=secondary_color, foreground='black', font=('Helvetica', 12))
 
 # Frame pour le texte en haut
 header_frame = ttk.Frame(app, style='TFrame')
@@ -536,7 +536,7 @@ search_entry.bind("<Return>", lambda event: search_activities(search_var.get()))
 search_button = ttk.Button(search_frame, text="Rechercher", command=lambda: search_activities(search_var.get()), style='TButton')
 search_button.pack(side=tk.LEFT, padx=10)
 # Liste des activités
-listbox = tk.Listbox(app, width=80, height=10, bg=secondary_color, fg='black', font=('Helvetica', 10))
+listbox = tk.Listbox(app, width=80, height=10, bg=secondary_color, fg='black', font=('Helvetica', 12))
 listbox.pack(pady=20)
 listbox.bind("<Double-1>", view_activity_details)
 
